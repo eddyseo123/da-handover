@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DA Handover</title>
+<style>
+  :root{
+    --bg:#0f0f10; --panel:#ffffff; --ink:#1a1a1a; --ink2:#404040;
+    --muted:#808080; --dim:#aaaaaa; --gold:#b68f4c; --warn:#d97e5e;
+    --line:#e6e6e6; --soft:#fafafa; --soft2:#f1f1f1; --ok:#2e8b57;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 28px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"맑은 고딕","Malgun Gothic","Apple SD Gothic Neo",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:var(--ink); background:#f4f4f5; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+
+  /* header */
+  header{ background:var(--ink); color:#fff; padding:12px 22px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .brand{ display:flex; align-items:center; gap:11px; background:none; border:none; padding:4px 6px; margin:-4px -6px; border-radius:8px; cursor:pointer; }
+  .brand:hover{ background:rgba(255,255,255,.06) }
+  #brandLogo{ display:none; height:34px; width:auto; max-width:200px }
+  .brandTitle{ font-size:19px; font-weight:800; letter-spacing:.3px; color:#fff; line-height:1 }
+  .sp{ flex:1 }
+  .keybox{ display:flex; align-items:center; gap:8px }
+  .keybox input[type=password],.keybox input[type=text]{ width:250px; padding:8px 11px; font-size:12.5px; border-radius:8px; border:1px solid #3a3a3a; background:#fff; color:var(--ink); outline:none; font-family:inherit }
+  .keybox input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(182,143,76,.18) }
+  .keybox .mini2{ font-size:11.5px; padding:7px 10px; border-radius:7px; border:1px solid #3a3a3a; background:#2a2a2a; color:#ddd; cursor:pointer; white-space:nowrap }
+  .keybox .mini2:hover{ background:#333 }
+  .savechk{ display:flex; align-items:center; gap:5px; font-size:12px; color:#cfcfcf; white-space:nowrap }
+  .savechk input{ width:auto; accent-color:var(--gold) }
+
+  main{max-width:920px; margin:0 auto; padding:24px 20px 64px}
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 22px; box-shadow:var(--shadow); margin-bottom:18px; }
+  h2{font-size:14px; margin:0 0 14px; letter-spacing:3px; color:var(--gold); font-weight:800}
+  label{display:block; font-size:12.5px; color:var(--ink2); font-weight:700; margin:0 0 5px}
+  .hint{font-size:11.5px; color:var(--muted); margin-top:5px}
+  input[type=text],input[type=password],select{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px; font-size:13.5px;
+    background:#fff; color:var(--ink); font-family:inherit; outline:none;
+  }
+  input:focus,select:focus{border-color:var(--gold); box-shadow:0 0 0 3px rgba(182,143,76,.12)}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .field{margin-bottom:14px}
+
+  .drop{ border:2px dashed #d2cdbf; border-radius:14px; background:linear-gradient(180deg,#fffdf8,#fafafa); padding:34px 20px; text-align:center; cursor:pointer; transition:.15s; }
+  .drop.drag{border-color:var(--gold); background:#fff7e9}
+  .drop .big{font-size:16px; font-weight:800; margin-bottom:4px}
+  .drop .sub{font-size:12.5px; color:var(--muted)}
+  .drop .file{margin-top:12px; font-size:13px; color:var(--gold); font-weight:700; word-break:break-all}
+  input[type=file]{display:none}
+
+  .actions{display:flex; gap:10px; align-items:center; margin-top:18px; flex-wrap:wrap}
+  .btn{ appearance:none; border:none; cursor:pointer; font-family:inherit; font-weight:800; font-size:14px; padding:12px 22px; border-radius:10px; background:var(--ink); color:#fff; transition:.15s; }
+  .btn:hover:not(:disabled){background:#000}
+  .btn:disabled{opacity:.4; cursor:not-allowed}
+  .btn.gold{background:var(--gold)} .btn.gold:hover:not(:disabled){background:#a37f3f}
+  .btn.ghost{background:#fff; color:var(--ink); border:1px solid var(--line)}
+  .btn.ghost:hover:not(:disabled){background:var(--soft2)}
+  .btn.sm{padding:9px 16px; font-size:13px}
+
+  #logCard{display:none}
+  .log{font-size:13px; line-height:1.9; font-variant-numeric:tabular-nums}
+  .log .li{display:flex; gap:9px; align-items:flex-start}
+  .log .ic{width:16px; text-align:center; flex:0 0 16px}
+  .log .ok{color:var(--ok)} .log .run{color:var(--gold)} .log .er{color:#c0392b}
+  .log .sub{color:var(--muted); padding-left:25px; font-size:12px}
+  .spinner{display:inline-block;width:13px;height:13px;border:2px solid #e3d8bf;border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  #resultCard{display:none}
+  .result-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .result-head .dot{width:9px;height:9px;border-radius:50%;background:var(--ok)}
+  .result-head .t{font-weight:800;font-size:15px}
+  .dlrow{display:flex;gap:10px;flex-wrap:wrap}
+  .errbox{display:none;margin-top:12px;background:#fdecec;border:1px solid #f5c6c6;color:#a02828;border-radius:9px;padding:12px 14px;font-size:12.5px;white-space:pre-wrap}
+  .footnote{font-size:11.5px;color:var(--muted);margin-top:12px}
+
+  /* library */
+  .storebadge{font-size:10.5px;font-weight:700;letter-spacing:0;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+  .storebadge.on{color:#2e8b57;border-color:#bfe3cd;background:#f0faf4}
+  .storebadge.off{color:#808080;background:#f3f3f3}
+  .libnote{font-size:12px;color:var(--muted);margin:0 0 12px}
+  .libbar{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
+  .libbar input[type=text]{flex:1;min-width:160px;max-width:340px;padding:9px 12px;font-size:13px}
+  .conntest{display:none;margin:0 0 12px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fbfbfb;font-size:12.5px;line-height:1.75}
+  .ctline span{font-weight:800;margin-right:6px}
+  .ctline.ok span{color:var(--ok)} .ctline.er span{color:#c0392b}
+  .ctline em{color:var(--muted);font-style:normal}
+  .liblist{display:flex;flex-direction:column;gap:8px}
+  .libitem{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--soft)}
+  .libitem .chk{width:17px;height:17px;flex:0 0 auto;cursor:pointer;accent-color:var(--gold)}
+  .libitem .meta{flex:1;min-width:0}
+  .libitem .nm{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .libitem .sub2{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .libitem .src{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:5px;margin-right:6px;border:1px solid var(--line)}
+  .libitem .src.gen{color:#2e8b57;border-color:#bfe3cd;background:#f0faf4}
+  .libitem .src.imp{color:#7a5cc0;border-color:#d8ccf0;background:#f6f2fd}
+  .libitem .src.edt{color:#b07d12;border-color:#ecd9a6;background:#fdf7e8}
+  .libitem .ops{display:flex;gap:6px;flex:0 0 auto}
+  .libbtn{font-size:12px;padding:7px 11px;border-radius:7px;border:1px solid var(--line);background:#fff;cursor:pointer;white-space:nowrap}
+  .libbtn:hover{background:var(--soft2)}
+  .libbtn.del{color:#c0392b;border-color:#f0c8c8}
+  .empty{font-size:12.5px;color:var(--muted);text-align:center;padding:18px;border:1px dashed var(--line);border-radius:10px}
+</style>
+</head>
+<body>
+<header>
+  <button class="brand" id="brandBtn" type="button" title="클릭해서 로고 이미지로 교체">
+    <img id="brandLogo" alt="" />
+    <span class="brandTitle">DA Handover</span>
+  </button>
+  <span class="sp"></span>
+  <div class="keybox">
+    <input id="apiKey" type="password" placeholder="Anthropic API 키 (sk-ant-...)" autocomplete="off" spellcheck="false" />
+    <button class="mini2" id="toggleKey" type="button">표시</button>
+    <label class="savechk"><input id="saveKey" type="checkbox" checked /> 저장</label>
+  </div>
+  <input id="logoInput" type="file" accept="image/*" />
+</header>
+
+<main>
+  <!-- UPLOAD -->
+  <section class="card">
+    <div class="drop" id="drop">
+      <div class="big">PDF 업로드</div>
+      <div class="sub">클릭 또는 드래그</div>
+      <div class="file" id="fileName"></div>
+    </div>
+    <input id="fileInput" type="file" accept="application/pdf,.pdf" />
+
+    <div class="row2" style="margin-top:16px">
+      <div class="field" style="margin-bottom:0">
+        <label for="outName">출력 파일 이름 <span style="font-weight:400;color:var(--muted)">(선택)</span></label>
+        <input id="outName" type="text" placeholder="예: 네이버_GFA" />
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label for="model">파싱 모델</label>
+        <select id="model">
+          <option value="claude-sonnet-4-6">Sonnet 4.6</option>
+          <option value="claude-opus-4-8">Opus 4.8</option>
+          <option value="__custom">직접 입력…</option>
+        </select>
+        <input id="modelCustom" type="text" placeholder="모델 ID 입력" style="display:none;margin-top:8px" />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn gold" id="runBtn" disabled>PPT 제작</button>
+      <span class="hint" style="margin:0">인터넷 연결 필요</span>
+    </div>
+    <div class="errbox" id="errbox"></div>
+  </section>
+
+  <!-- LOG -->
+  <section class="card" id="logCard">
+    <h2>진행 상황</h2>
+    <div class="log" id="log"></div>
+  </section>
+
+  <!-- RESULT -->
+  <section class="card" id="resultCard">
+    <div class="result-head"><span class="dot"></span><span class="t">완료! · 라이브러리에 저장됨</span></div>
+    <div class="dlrow"><button class="btn" id="dlPptx">PPTX 다운로드</button></div>
+    <div class="footnote">아래 <b>라이브러리</b>에도 저장되어 언제든 다시 받을 수 있어요.</div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section class="card" id="libCard">
+    <h2 style="display:flex;align-items:center;gap:10px">라이브러리 <span id="storeBadge" class="storebadge off">이 브라우저</span></h2>
+    <p class="libnote">PPT는 라이브러리에 저장됩니다. 교체 및 직접 수정 후 업로드가 가능합니다.</p>
+    <div class="libbar">
+      <input id="libSearch" type="text" placeholder="이름으로 검색…" />
+      <button class="btn sm" id="downloadBtn" type="button" disabled>라이브러리 PPT 다운로드</button>
+      <button class="btn ghost sm" id="teamBtn" type="button" title="팀 공유(Supabase) 켜기/끄기">팀 저장소</button>
+      <button class="btn ghost sm" id="testBtn" type="button" title="Supabase 연결 점검">연결 테스트</button>
+    </div>
+    <div id="connTest" class="conntest"></div>
+    <input id="replaceInput" type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+    <div id="libList" class="liblist"></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<script type="module">
+import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/legacy/build/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/legacy/build/pdf.worker.min.mjs";
+
+/* 고정값: PPT 본문 폰트 / 가이드 이미지 DPI */
+const FIXED_FONT = "맑은 고딕";
+const FIXED_DPI = 130;
+
+/* ── 팀 공유 저장소 (Supabase) ──
+   배포 전에 아래 두 값을 채워 넣으면 '모두가' 같은 라이브러리를 공유합니다.
+   비워 두면 각자 브라우저(이 기기)에만 저장됩니다. (사용법 문서 참고) */
+const SUPABASE_URL = "https://txxoffebmqytjldsrtop.supabase.co";        // 팀 기본 프로젝트
+const SUPABASE_ANON_KEY = "sb_publishable_So8d0dhyF5sqik0wDs3mcA_cpTUAqWh";  // publishable(공개용) 키
+const SB_BUCKET = "decks";
+
+/* ============================================================
+   디자인 토큰 — 와이드스크린 16:9 (13.333 × 7.5)
+============================================================ */
+const SLIDE_W = 13.333, SLIDE_H = 7.5;
+const COLORS = {
+  headerBg:"1A1A1A", gold:"B68F4C", warn:"D97E5E",
+  text:"1A1A1A", textSec:"404040", textMuted:"808080", textDim:"AAAAAA",
+  white:"FFFFFF", panelHead:"EFEFEF", panelCell:"FAFAFA", border:"D9D9D9", footer:"B0B0B0",
+};
+const LAYOUT = {
+  slideW:SLIDE_W, slideH:SLIDE_H, headerH:0.7,
+  titleX:0.5, titleY:0.1,
+  leftX:0.5, downloadY:0.81, layoutLabelY:0.95, imgY:1.25, imgW:6.0, imgMaxH:2.6,
+  rightX:6.99, rightW:6.0, copyLabelY:0.95, copyTableY:1.2,
+  copyRowH:0.24, specRowH:0.26, sectionGap:0.26, blockGap:0.14, lineH:0.2,
+  footerY:7.32,
+};
+const FONT_SIZE = { title:16, sectionLabel:11, smallLabel:9, body:9.5, tableHead:9.5, tableCell:9, footer:8 };
+
+/* ============================================================
+   파싱 프롬프트
+============================================================ */
+const PARSE_INSTRUCTION = `당신은 광고 매체 DA(디스플레이 광고) 제작 가이드라인 PDF를 분석해, 제작팀 핸드오프용 슬라이드 데이터로 변환하는 전문가입니다.
+
+첨부된 PDF는 한국 광고 매체(네이버, 카카오, 토스 등)의 DA 소재 제작 가이드입니다. PDF가 깨진 글자(인코딩 오류)를 포함하더라도, 페이지 이미지를 보고 내용을 파악하세요.
+
+# 목표
+이 가이드를 아래 JSON 스키마로 변환하세요. 각 "매체 + 소재 타입" 조합이 하나의 슬라이드가 됩니다.
+
+# 슬라이드 분할 규칙
+- 기본: 매체(또는 상품 유형) 1개당 슬라이드 1장.
+- 한 매체 안에 스펙이 명확히 다른 소재 타입(예: 이미지형 1:1 / 16:9, 이미지 배경 / 누끼 배경)이 있으면 각각 별도 슬라이드로 분리.
+- 동영상형은 제외하고 이미지/배너 소재만 다룹니다.
+
+# 각 슬라이드 필드
+- title: 슬라이드 제목. "{매체명} — {소재 타입}" 형식 (예: "네이버 GFA — 이미지 배경"). 소재 타입이 하나뿐이면 매체명만.
+- layoutReferencePage: 이 소재의 레이아웃/예시 이미지가 가장 잘 나온 PDF 페이지 번호(1-base). 가장 대표적인 1개 페이지.
+- cropRatio: 그 페이지에서 해당 소재 예시가 차지하는 세로 구간 비율. { "top": 0.0~1.0, "bottom": 0.0~1.0 }. 페이지 전체를 쓰려면 null. (한 페이지에 여러 소재 예시가 세로로 나열돼 있으면, 이 소재에 해당하는 구간만 지정)
+- copyElements: 카피 요소 배열. 각 항목 { "label": "메인카피", "token": "#" | "%", "charLimit": 숫자 또는 null }
+    - token 규칙: 사용자가 직접 입력하는 카피(메인카피/서브카피/광고주명/고지문구 등)는 "#", 시스템이 자동 노출하거나 고정 옵션 중 선택하는 것(랜딩버튼/행동유도버튼 등)은 "%".
+    - charLimit: 글자수 제한(숫자). 제한이 없으면 null.
+- spec: 소재 스펙 배열. 각 항목 { "key": "사이즈", "value": "1250 × 560px (2.3:1)" }. 사이즈/용량/포맷/전달수량/SAFE AREA 등.
+- mustInclude: "01 필수 포함 영역" 불릿 배열. 반드시 들어가야 하는 요소들. 각 항목 앞에 "• " 붙이기.
+- textGuide: "02 텍스트 가이드" 불릿 배열. 폰트/글자수/컬러/가독성 등. 각 항목 앞에 "• " 붙이기. 최대 4개로 압축.
+- creativeGuide: "03 크리에이티브 가이드" 불릿 배열. 금지/제한 사항. 각 항목 앞에 "✕ " 붙이기. 최대 4개로 압축.
+
+# 출력 형식
+반드시 아래 JSON만 출력하세요. 마크다운 코드펜스(\`\`\`)나 설명 문장 없이 순수 JSON 객체만.
+
+{
+  "guideTitle": "가이드 전체 제목",
+  "mediaSlides": [
+    {
+      "title": "...",
+      "layoutReferencePage": 4,
+      "cropRatio": { "top": 0.15, "bottom": 0.55 },
+      "copyElements": [ { "label": "메인카피", "token": "#", "charLimit": 20 } ],
+      "spec": [ { "key": "사이즈", "value": "..." } ],
+      "mustInclude": ["• ..."],
+      "textGuide": ["• ..."],
+      "creativeGuide": ["✕ ..."]
+    }
+  ]
+}`;
+
+function safeParseJSON(text){
+  let t = (text||"").trim();
+  t = t.replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+  const start = t.indexOf("{"), end = t.lastIndexOf("}");
+  if(start===-1||end===-1) throw new Error("Claude 응답에서 JSON을 찾지 못했습니다.\n응답:\n"+text.slice(0,500));
+  return JSON.parse(t.slice(start,end+1));
+}
+
+/* ============================================================
+   PDF 처리 (pdf.js + canvas)
+============================================================ */
+function base64FromArrayBuffer(buf){
+  const bytes = new Uint8Array(buf);
+  let binary = ""; const chunk = 0x8000;
+  for(let i=0;i<bytes.length;i+=chunk) binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+  return btoa(binary);
+}
+async function loadPdf(arrayBuffer){
+  const copy = arrayBuffer.slice(0);
+  return await pdfjsLib.getDocument({ data: new Uint8Array(copy) }).promise;
+}
+async function renderPage(pdfDoc, pageNum, dpi){
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale: dpi/72 });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+  return canvas;
+}
+function toPptxImageData(canvas){ return canvas.toDataURL("image/png").replace(/^data:/, ""); }
+function cropVertical(canvas, ratio){
+  if(!ratio || ratio.top==null || ratio.bottom==null) return canvas;
+  const H = canvas.height, W = canvas.width;
+  const top = Math.max(0, Math.round(H*ratio.top));
+  const bottom = Math.min(H, Math.round(H*ratio.bottom));
+  const h = Math.max(1, bottom-top);
+  const out = document.createElement("canvas");
+  out.width = W; out.height = h;
+  out.getContext("2d").drawImage(canvas, 0, top, W, h, 0, 0, W, h);
+  return out;
+}
+
+/* ============================================================
+   Claude 파싱 (브라우저 fetch)
+============================================================ */
+async function parseGuide(pdfBase64, { apiKey, model }){
+  let res;
+  try{
+    res = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "x-api-key": apiKey, "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true", "content-type":"application/json",
+      },
+      body: JSON.stringify({
+        model, max_tokens: 8000,
+        messages:[{ role:"user", content:[
+          { type:"document", source:{ type:"base64", media_type:"application/pdf", data: pdfBase64 } },
+          { type:"text", text: PARSE_INSTRUCTION },
+        ]}],
+      }),
+    });
+  }catch(e){ const err = new Error("네트워크 호출 실패"); err.cors = true; throw err; }
+  if(!res.ok){
+    let msg = `HTTP ${res.status}`;
+    try{ const j = await res.json(); msg = j?.error?.message || msg; }catch{}
+    if(res.status===401) msg = "API 키가 올바르지 않습니다 (401). 키를 확인하세요.";
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  return safeParseJSON(text);
+}
+
+/* ============================================================
+   PPT 생성 — 16:9 고정 + 오버플로우 방지
+============================================================ */
+function rectType(pres){
+  if(pres.shapes && pres.shapes.RECTANGLE) return pres.shapes.RECTANGLE;
+  if(pres.ShapeType && pres.ShapeType.rect) return pres.ShapeType.rect;
+  return "rect";
+}
+function cell(FONT, m, text, kind="body", align="left"){
+  const base = { fontFace:FONT, valign:"middle", align };
+  switch(kind){
+    case "head":    return { text, options:{...base, bold:true, color:COLORS.textMuted, fontSize:m.fsHead, fill:{color:COLORS.panelHead}} };
+    case "specKey": return { text, options:{...base, color:COLORS.textMuted, fontSize:m.fsCell, fill:{color:COLORS.panelHead}} };
+    case "specVal": return { text, options:{...base, color:COLORS.text, fontSize:m.fsCell, fill:{color:COLORS.white}} };
+    case "muted":   return { text, options:{...base, color:COLORS.textMuted, fontSize:m.fsHead, fill:{color:COLORS.white}} };
+    default:        return { text, options:{...base, color:COLORS.text, fontSize:m.fsHead, fill:{color:COLORS.white}} };
+  }
+}
+function bulletRuns(lines){ return lines.map((t,i,a)=>({ text:t, options: i<a.length-1 ? {breakLine:true} : {} })); }
+
+function buildSlide(pres, FONT, slide, guideImageData, imgH){
+  const RECT = rectType(pres);
+  const s = pres.addSlide();
+  s.background = { color: COLORS.white };
+
+  s.addShape(RECT, { x:0, y:0, w:LAYOUT.slideW, h:LAYOUT.headerH, fill:{color:COLORS.headerBg}, line:{color:COLORS.headerBg} });
+  s.addText(slide.title || "DA 소재 가이드", { x:LAYOUT.titleX, y:LAYOUT.titleY, w:LAYOUT.slideW-1, h:0.5, fontSize:FONT_SIZE.title, fontFace:FONT, color:COLORS.white, bold:true, valign:"middle", margin:0 });
+
+  s.addText("가이드 다운로드", { x:LAYOUT.leftX, y:LAYOUT.downloadY, w:2.0, h:0.2, fontSize:FONT_SIZE.smallLabel, fontFace:FONT, color:COLORS.gold, bold:true, underline:true, margin:0 });
+  s.addText("LAYOUT REFERENCE", { x:LAYOUT.leftX, y:LAYOUT.layoutLabelY, w:6, h:0.25, fontSize:FONT_SIZE.smallLabel, fontFace:FONT, color:COLORS.gold, bold:true, charSpacing:4, margin:0 });
+  const imgHfit = Math.max(0.5, Math.min(imgH, LAYOUT.footerY - LAYOUT.imgY - 0.12));
+  if(guideImageData){
+    s.addImage({ data:guideImageData, x:LAYOUT.leftX, y:LAYOUT.imgY, w:LAYOUT.imgW, h:imgHfit, sizing:{type:"contain", w:LAYOUT.imgW, h:imgHfit} });
+  }else{
+    s.addShape(RECT, { x:LAYOUT.leftX, y:LAYOUT.imgY, w:LAYOUT.imgW, h:imgHfit, fill:{color:COLORS.panelCell}, line:{color:COLORS.border, width:1} });
+    s.addText("(가이드 예시 이미지 없음)", { x:LAYOUT.leftX, y:LAYOUT.imgY, w:LAYOUT.imgW, h:imgHfit, fontSize:11, fontFace:FONT, color:COLORS.textDim, align:"center", valign:"middle", margin:0 });
+  }
+
+  const rx = LAYOUT.rightX, rw = LAYOUT.rightW;
+  s.addText("COPY ELEMENTS", { x:rx, y:LAYOUT.copyLabelY, w:rw, h:0.25, fontSize:FONT_SIZE.smallLabel, fontFace:FONT, color:COLORS.gold, bold:true, charSpacing:4, margin:0 });
+
+  const copyRows = slide.copyElements || [];
+  const specRows = slide.spec || [];
+  const must = slide.mustInclude || [];
+  const tg = slide.textGuide || [];
+  const creative = slide.creativeGuide || [];
+  const nCopy = copyRows.length + 1;
+
+  const B = { copyRowH:LAYOUT.copyRowH, specRowH:LAYOUT.specRowH, sectionGap:LAYOUT.sectionGap, blockGap:LAYOUT.blockGap, lineH:LAYOUT.lineH, pad:0.12,
+              fsSection:FONT_SIZE.sectionLabel, fsBody:FONT_SIZE.body, fsHead:FONT_SIZE.tableHead, fsCell:FONT_SIZE.tableCell };
+  const neededH = (mm)=>{
+    let h = nCopy*mm.copyRowH + mm.blockGap + mm.pad;
+    h += mm.sectionGap + (specRows.length ? specRows.length*mm.specRowH + mm.blockGap : 0);
+    h += mm.sectionGap + (must.length ? must.length*mm.lineH + mm.blockGap : 0);
+    h += mm.sectionGap + (tg.length ? tg.length*mm.lineH + mm.blockGap : 0);
+    h += mm.sectionGap + (creative.length ? creative.length*mm.lineH : 0);
+    return h;
+  };
+  const avail = (LAYOUT.footerY - 0.06) - LAYOUT.copyTableY;
+  const k = Math.min(1, avail / neededH(B));
+  const m = {
+    copyRowH:B.copyRowH*k, specRowH:B.specRowH*k, sectionGap:B.sectionGap*k, blockGap:B.blockGap*k, lineH:B.lineH*k, pad:B.pad*k,
+    fsSection:B.fsSection*k, fsBody:B.fsBody*k, fsHead:B.fsHead*k, fsCell:B.fsCell*k,
+  };
+  const labelH = m.sectionGap;
+
+  const copyTbl = [
+    [cell(FONT,m,"구분","head"), cell(FONT,m,"내용","head"), cell(FONT,m,"글자수","head","center")],
+    ...copyRows.map(r=>[ cell(FONT,m, r.label||"", "body"), cell(FONT,m, `${r.token||"#"} ${r.label||""}`, "body"), cell(FONT,m, r.charLimit!=null ? `${r.charLimit}자` : "-", "muted", "center") ]),
+  ];
+  s.addTable(copyTbl, { x:rx, y:LAYOUT.copyTableY, w:rw, colW:[1.3,3.7,1.0], rowH:m.copyRowH, border:{type:"solid", pt:0.5, color:COLORS.border} });
+
+  let y = LAYOUT.copyTableY + copyTbl.length*m.copyRowH + m.blockGap + m.pad;
+
+  s.addText("00  소재 스펙", { x:rx, y, w:rw, h:labelH, fontSize:m.fsSection, fontFace:FONT, color:COLORS.gold, bold:true, valign:"middle", margin:0 });
+  y += m.sectionGap;
+  if(specRows.length){
+    const specTbl = specRows.map(r=>[cell(FONT,m, r.key||"", "specKey"), cell(FONT,m, r.value||"", "specVal")]);
+    s.addTable(specTbl, { x:rx, y, w:rw, colW:[1.4,4.6], rowH:m.specRowH, border:{type:"solid", pt:0.5, color:COLORS.border} });
+    y += specRows.length*m.specRowH + m.blockGap;
+  }
+
+  s.addText("01  필수 포함 영역", { x:rx, y, w:rw, h:labelH, fontSize:m.fsSection, fontFace:FONT, color:COLORS.gold, bold:true, valign:"middle", margin:0 });
+  y += m.sectionGap;
+  if(must.length){ s.addText(bulletRuns(must), { x:rx, y, w:rw, h:m.lineH*must.length, fontSize:m.fsBody, fontFace:FONT, color:COLORS.textSec, valign:"top", margin:0, paraSpaceAfter:1 }); y += must.length*m.lineH + m.blockGap; }
+
+  s.addText("02  텍스트 가이드", { x:rx, y, w:rw, h:labelH, fontSize:m.fsSection, fontFace:FONT, color:COLORS.gold, bold:true, valign:"middle", margin:0 });
+  y += m.sectionGap;
+  if(tg.length){ s.addText(bulletRuns(tg), { x:rx, y, w:rw, h:m.lineH*tg.length, fontSize:m.fsBody, fontFace:FONT, color:COLORS.textSec, valign:"top", margin:0, paraSpaceAfter:1 }); y += tg.length*m.lineH + m.blockGap; }
+
+  s.addText("03  크리에이티브 가이드", { x:rx, y, w:rw, h:labelH, fontSize:m.fsSection, fontFace:FONT, color:COLORS.warn, bold:true, valign:"middle", margin:0 });
+  y += m.sectionGap;
+  if(creative.length){ s.addText(bulletRuns(creative), { x:rx, y, w:rw, h:m.lineH*creative.length, fontSize:m.fsBody, fontFace:FONT, color:COLORS.textSec, valign:"top", margin:0, paraSpaceAfter:1 }); }
+
+  s.addText("DA Handover", { x:0.5, y:LAYOUT.footerY, w:6, h:0.3, fontSize:FONT_SIZE.footer, fontFace:FONT, color:COLORS.footer, italic:true, margin:0 });
+}
+
+async function buildDeck(parsed, images, { font }){
+  const pres = new window.PptxGenJS();
+  pres.defineLayout({ name:"DA_16x9", width:SLIDE_W, height:SLIDE_H });
+  pres.layout = "DA_16x9";
+  pres.title = parsed.guideTitle || "DA 제작 가이드";
+  (parsed.mediaSlides||[]).forEach((slide,i)=>{
+    const img = images[i] || {};
+    buildSlide(pres, font, slide, img.data || null, img.imgH || LAYOUT.imgMaxH);
+  });
+  return await pres.write({ outputType:"blob" });
+}
+
+/* ============================================================
+   PPTX 병합 (여러 .pptx → 하나) — JSZip OOXML 머지
+============================================================ */
+const RNS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const REL_SLIDE  = RNS + "/slide";
+const REL_MASTER = RNS + "/slideMaster";
+const CT_SLIDE  = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml";
+const CT_MASTER = "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml";
+const MIME_BY_EXT = { png:"image/png", jpg:"image/jpeg", jpeg:"image/jpeg", gif:"image/gif", bmp:"image/bmp", svg:"image/svg+xml", tif:"image/tiff", tiff:"image/tiff", emf:"image/x-emf", wmf:"image/x-wmf" };
+
+function parseXml(s){ return new DOMParser().parseFromString(s, "application/xml"); }
+function dirOf(p){ const i=p.lastIndexOf("/"); return i<0 ? "" : p.slice(0,i); }
+function normalizePath(baseDir, rel){
+  if(rel.startsWith("/")) return rel.slice(1);
+  const parts = (baseDir ? baseDir.split("/") : []).concat(rel.split("/"));
+  const out = [];
+  for(const p of parts){ if(p===""||p===".") continue; if(p==="..") out.pop(); else out.push(p); }
+  return out.join("/");
+}
+function relPath(fromDir, toPath){
+  const f = fromDir ? fromDir.split("/") : [], t = toPath.split("/");
+  let i=0; while(i<f.length && i<t.length-1 && f[i]===t[i]) i++;
+  const rel = [];
+  for(let k=0;k<f.length-i;k++) rel.push("..");
+  for(let k=i;k<t.length;k++) rel.push(t[k]);
+  return rel.join("/");
+}
+function relsPathFor(p){ const d=dirOf(p), n=p.slice(d.length+1); return `${d}/_rels/${n}.rels`; }
+function textLike(p){ return /\.(xml|rels)$/i.test(p); }
+function maxNum(str, re){ let mx=0, m; re.lastIndex=0; while((m=re.exec(str))) mx=Math.max(mx, parseInt(m[1],10)); return mx; }
+function parseContentTypes(s){
+  const doc=parseXml(s), overrides={}, defaults={};
+  [...doc.getElementsByTagName("Override")].forEach(o=>{ overrides[o.getAttribute("PartName")]=o.getAttribute("ContentType"); });
+  [...doc.getElementsByTagName("Default")].forEach(d=>{ defaults[(d.getAttribute("Extension")||"").toLowerCase()]=d.getAttribute("ContentType"); });
+  return { overrides, defaults };
+}
+async function orderedSlides(zip){
+  try{
+    const pres = await zip.file("ppt/presentation.xml").async("string");
+    const rels = await zip.file("ppt/_rels/presentation.xml.rels").async("string");
+    const idToTarget = {};
+    [...parseXml(rels).getElementsByTagName("Relationship")].forEach(r=>{ idToTarget[r.getAttribute("Id")] = r.getAttribute("Target"); });
+    const order = [];
+    [...parseXml(pres).getElementsByTagName("p:sldId")].forEach(s=>{
+      const rid = s.getAttribute("r:id") || s.getAttributeNS(RNS, "id");
+      const t = idToTarget[rid];
+      if(t) order.push(normalizePath("ppt", t));
+    });
+    if(order.length) return order;
+  }catch(e){}
+  const files=[]; zip.forEach((p,f)=>{ if(!f.dir && /^ppt\/slides\/slide\d+\.xml$/.test(p)) files.push(p); });
+  files.sort((a,b)=>parseInt(a.match(/(\d+)/)[1])-parseInt(b.match(/(\d+)/)[1]));
+  return files;
+}
+function rewriteRels(relStr, oldDir, newDir, rename){
+  const rels = [...parseXml(relStr).getElementsByTagName("Relationship")];
+  const out = [];
+  for(const r of rels){
+    const id=r.getAttribute("Id"), type=r.getAttribute("Type"), tgt=r.getAttribute("Target"), mode=r.getAttribute("TargetMode");
+    if(mode==="External"){ out.push(`<Relationship Id="${id}" Type="${type}" Target="${tgt}" TargetMode="External"/>`); continue; }
+    const oldAbs = normalizePath(oldDir, tgt);
+    if(rename[oldAbs]) out.push(`<Relationship Id="${id}" Type="${type}" Target="${relPath(newDir, rename[oldAbs])}"/>`);
+  }
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${out.join("")}</Relationships>`;
+}
+function insertIntoList(xml, listTag, itemsXml){
+  if(!itemsXml) return xml;
+  const close = `</${listTag}>`;
+  if(xml.includes(close)) return xml.replace(close, itemsXml+close);
+  const self = new RegExp(`<${listTag}\\s*/>`);
+  if(self.test(xml)) return xml.replace(self, `<${listTag}>${itemsXml}</${listTag}>`);
+  return xml;
+}
+
+async function firstSlideLayout(zip){
+  try{
+    const slides = await orderedSlides(zip);
+    if(slides.length){
+      const relF = zip.file(relsPathFor(slides[0]));
+      if(relF){
+        for(const r of [...parseXml(await relF.async("string")).getElementsByTagName("Relationship")]){
+          if((r.getAttribute("Type")||"").endsWith("/slideLayout")) return normalizePath(dirOf(slides[0]), r.getAttribute("Target"));
+        }
+      }
+    }
+  }catch{}
+  if(zip.file("ppt/slideLayouts/slideLayout1.xml")) return "ppt/slideLayouts/slideLayout1.xml";
+  return null;
+}
+
+async function assertXmlOk(zip, path){
+  const f = zip.file(path); if(!f) throw new Error(path+" 누락");
+  const doc = parseXml(await f.async("string"));
+  if(doc.getElementsByTagName("parsererror").length) throw new Error(path+" XML 형식 오류");
+}
+
+// 소스 덱의 "슬라이드만" 베이스로 복사 — 레이아웃/마스터/테마는 베이스 것 재사용(앱이 만든 덱은 동일 템플릿)
+async function mergeSlidesFrom(srcZip, ctx){
+  const srcCT = await srcZip.file("[Content_Types].xml").async("string");
+  const { overrides:srcOv, defaults:srcDef } = parseContentTypes(srcCT);
+  const slides = await orderedSlides(srcZip);
+  for(const slideAbs of slides){
+    const newSlide = `ppt/slides/mrg${++ctx.c}.xml`;
+    const oldDir = dirOf(slideAbs), newDir = dirOf(newSlide);
+    ctx.target.file(newSlide, await srcZip.file(slideAbs).async("string"));
+    ctx.ctOverrides.push(["/"+newSlide, srcOv["/"+slideAbs] || CT_SLIDE]);
+
+    const relsOut = []; let hasLayout = false;
+    const relF = srcZip.file(relsPathFor(slideAbs));
+    if(relF){
+      for(const r of [...parseXml(await relF.async("string")).getElementsByTagName("Relationship")]){
+        const id=r.getAttribute("Id"), type=r.getAttribute("Type")||"", tgt=r.getAttribute("Target"), mode=r.getAttribute("TargetMode");
+        if(mode==="External"){ relsOut.push(`<Relationship Id="${id}" Type="${type}" Target="${tgt}" TargetMode="External"/>`); continue; }
+        if(type.endsWith("/slideLayout")){ relsOut.push(`<Relationship Id="${id}" Type="${type}" Target="${relPath(newDir, ctx.baseLayoutAbs)}"/>`); hasLayout=true; continue; }
+        const depAbs = normalizePath(oldDir, tgt);
+        const depFile = srcZip.file(depAbs);
+        if(!depFile) continue;
+        const ext = depAbs.split(".").pop().toLowerCase();
+        const newDep = `ppt/media/mrg${++ctx.c}.${ext}`;
+        ctx.target.file(newDep, await depFile.async("uint8array"));
+        if(!ctx.mediaExt.has(ext)) ctx.mediaExt.set(ext, srcDef[ext] || MIME_BY_EXT[ext] || "application/octet-stream");
+        relsOut.push(`<Relationship Id="${id}" Type="${type}" Target="${relPath(newDir, newDep)}"/>`);
+      }
+    }
+    if(!hasLayout) relsOut.push(`<Relationship Id="rIdLay" Type="${RNS}/slideLayout" Target="${relPath(newDir, ctx.baseLayoutAbs)}"/>`);
+    ctx.target.file(relsPathFor(newSlide), `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relsOut.join("")}</Relationships>`);
+
+    const rid = `rId${++ctx.cRid}`;
+    ctx.presRels.push([rid, REL_SLIDE, relPath("ppt", newSlide)]);
+    ctx.sldEntries.push([++ctx.sldId, rid]);
+  }
+}
+
+async function mergePptx(blobs){
+  if(!window.JSZip) throw new Error("JSZip 로딩 실패 — 인터넷 연결 확인 후 새로고침");
+  const base = await JSZip.loadAsync(blobs[0]);
+  const baseCT = await base.file("[Content_Types].xml").async("string");
+  let basePres = await base.file("ppt/presentation.xml").async("string");
+  let basePresRels = await base.file("ppt/_rels/presentation.xml.rels").async("string");
+  const baseLayoutAbs = (await firstSlideLayout(base)) || "ppt/slideLayouts/slideLayout1.xml";
+
+  const ctx = {
+    target: base, c: 0, baseLayoutAbs,
+    cRid: maxNum(basePresRels, /Id="rId(\d+)"/g),
+    sldId: maxNum(basePres, /<p:sldId[^>]*\sid="(\d+)"/g) || 255,
+    presRels: [], sldEntries: [], ctOverrides: [], mediaExt: new Map(),
+  };
+
+  for(let i=1;i<blobs.length;i++){ const src = await JSZip.loadAsync(blobs[i]); await mergeSlidesFrom(src, ctx); }
+
+  const defaultsXml = [...ctx.mediaExt].filter(([ext])=> !new RegExp(`Extension="${ext}"`, "i").test(baseCT)).map(([ext,c])=>`<Default Extension="${ext}" ContentType="${c}"/>`).join("");
+  const overridesXml = ctx.ctOverrides.map(([pn,c])=>`<Override PartName="${pn}" ContentType="${c}"/>`).join("");
+  base.file("[Content_Types].xml", baseCT.replace("</Types>", defaultsXml+overridesXml+"</Types>"));
+
+  const prx = ctx.presRels.map(([rid,t,tg])=>`<Relationship Id="${rid}" Type="${t}" Target="${tg}"/>`).join("");
+  base.file("ppt/_rels/presentation.xml.rels", basePresRels.replace("</Relationships>", prx+"</Relationships>"));
+
+  const sldXml = ctx.sldEntries.map(([id,rid])=>`<p:sldId id="${id}" r:id="${rid}"/>`).join("");
+  base.file("ppt/presentation.xml", insertIntoList(basePres, "p:sldIdLst", sldXml));
+
+  const out = await base.generateAsync({ type:"blob", mimeType:"application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+  const check = await JSZip.loadAsync(out);
+  await assertXmlOk(check, "[Content_Types].xml");
+  await assertXmlOk(check, "ppt/presentation.xml");
+  await assertXmlOk(check, "ppt/_rels/presentation.xml.rels");
+  return out;
+}
+
+/* ============================================================
+   라이브러리 저장소 (IndexedDB)
+============================================================ */
+const DB_NAME="da-handoff-db", STORE="decks";
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open(DB_NAME,1);
+    r.onupgradeneeded = ()=>{ const db=r.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:"id"}); };
+    r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error);
+  });
+}
+async function idbAll(){ const db=await openDB(); return new Promise((res,rej)=>{ const q=db.transaction(STORE,"readonly").objectStore(STORE).getAll(); q.onsuccess=()=>res(q.result||[]); q.onerror=()=>rej(q.error); }); }
+async function idbPut(item){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,"readwrite"); tx.objectStore(STORE).put(item); tx.oncomplete=()=>res(item); tx.onerror=()=>rej(tx.error); }); }
+async function idbDel(id){ const db=await openDB(); return new Promise((res,rej)=>{ const tx=db.transaction(STORE,"readwrite"); tx.objectStore(STORE).delete(id); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+async function idbGet(id){ const db=await openDB(); return new Promise((res,rej)=>{ const q=db.transaction(STORE,"readonly").objectStore(STORE).get(id); q.onsuccess=()=>res(q.result||null); q.onerror=()=>rej(q.error); }); }
+function newId(){ return Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8); }
+
+/* ============================================================
+   저장소 추상화 — 팀 공유(Supabase) 또는 로컬(IndexedDB) 자동 선택
+============================================================ */
+function cloudCfg(){
+  // 사용자가 [팀 저장소]로 직접 넣은 값(localStorage)이 코드 기본값보다 우선
+  const url = (localStorage.getItem("da-sb-url") || SUPABASE_URL || "").trim();
+  const key = (localStorage.getItem("da-sb-key") || SUPABASE_ANON_KEY || "").trim();
+  return (url && key) ? { url, key } : null;
+}
+function teamOn(){ return !!cloudCfg(); }
+let _sbClient = null, _sbKeyUsed = "";
+async function sbClient(){
+  const cfg = cloudCfg(); if(!cfg) return null;
+  const sig = cfg.url + "|" + cfg.key;
+  if(_sbClient && _sbKeyUsed === sig) return _sbClient;
+  const mod = await import("https://esm.sh/@supabase/supabase-js@2");
+  _sbClient = mod.createClient(cfg.url, cfg.key);
+  _sbKeyUsed = sig;
+  return _sbClient;
+}
+
+const LocalStore = {
+  async list(){ const items = await idbAll(); return items.map(it=>({ id:it.id, name:it.name, createdAt:it.createdAt, slideCount:it.slideCount, source:it.source, edited:it.edited, updatedAt:it.updatedAt })); },
+  async save(meta, blob){ await idbPut({ ...meta, pptx: blob }); },
+  async getBlob(id){ const it = await idbGet(id); return it ? it.pptx : null; },
+  async remove(id){ await idbDel(id); },
+  async rename(id, name){ const it = await idbGet(id); if(it){ it.name = name; await idbPut(it); } },
+  async replace(id, blob, slideCount){ const it = await idbGet(id); if(!it) return; it.pptx = blob; it.edited = true; it.updatedAt = Date.now(); it.slideCount = slideCount; await idbPut(it); },
+};
+
+const CT_PPTX = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+const CloudStore = {
+  async _c(){ const c = await sbClient(); if(!c) throw new Error("팀 저장소 설정이 없습니다."); return c; },
+  async list(){
+    const c = await this._c();
+    const { data, error } = await c.from("decks").select("*").order("created_at", { ascending:false });
+    if(error) throw new Error(error.message);
+    return (data||[]).map(r=>({ id:r.id, name:r.name, createdAt:r.created_at?new Date(r.created_at).getTime():0, slideCount:r.slide_count, source:r.source, edited:r.edited, updatedAt:r.updated_at?new Date(r.updated_at).getTime():null }));
+  },
+  async save(meta, blob){
+    const c = await this._c();
+    const up = await c.storage.from(SB_BUCKET).upload(`${meta.id}.pptx`, blob, { upsert:true, contentType:CT_PPTX });
+    if(up.error) throw new Error(up.error.message);
+    const row = { id:meta.id, name:meta.name, created_at:new Date(meta.createdAt||Date.now()).toISOString(), slide_count:meta.slideCount??null, source:meta.source||"generated", edited:!!meta.edited, updated_at:meta.updatedAt?new Date(meta.updatedAt).toISOString():null, storage_path:`${meta.id}.pptx` };
+    const { error } = await c.from("decks").upsert(row);
+    if(error) throw new Error(error.message);
+  },
+  async getBlob(id){
+    const c = await this._c();
+    const { data, error } = await c.storage.from(SB_BUCKET).download(`${id}.pptx`);
+    if(error) throw new Error(error.message);
+    return data;
+  },
+  async remove(id){
+    const c = await this._c();
+    await c.storage.from(SB_BUCKET).remove([`${id}.pptx`]);
+    const { error } = await c.from("decks").delete().eq("id", id);
+    if(error) throw new Error(error.message);
+  },
+  async rename(id, name){
+    const c = await this._c();
+    const { error } = await c.from("decks").update({ name }).eq("id", id);
+    if(error) throw new Error(error.message);
+  },
+  async replace(id, blob, slideCount){
+    const c = await this._c();
+    const up = await c.storage.from(SB_BUCKET).upload(`${id}.pptx`, blob, { upsert:true, contentType:CT_PPTX });
+    if(up.error) throw new Error(up.error.message);
+    const { error } = await c.from("decks").update({ edited:true, updated_at:new Date().toISOString(), slide_count:slideCount??null }).eq("id", id);
+    if(error) throw new Error(error.message);
+  },
+};
+
+function activeStore(){ return cloudCfg() ? CloudStore : LocalStore; }
+
+/* ============================================================
+   UI
+============================================================ */
+const $ = (id)=>document.getElementById(id);
+const state = { file:null, pdfDoc:null, pageCount:0, pdfBase64:null, parsed:null, blob:null, stem:"가이드", libId:null };
+const selectedOrder = [];
+
+/* 로고 (헤더) — logo.png 자동 로드, 클릭 시 이미지 업로드해 교체(브라우저 저장) */
+const LOGO_LS = "da-handoff-logo";
+function applyLogo(){
+  const img = $("brandLogo");
+  img.onerror = ()=>{ img.style.display = "none"; };
+  img.onload  = ()=>{ img.style.display = "block"; };
+  const saved = localStorage.getItem(LOGO_LS);
+  img.src = saved || "logo.png";
+}
+
+/* 설정 저장/복원 (API 키 + 모델) */
+const LS = "da-handoff-settings";
+function loadSettings(){
+  try{
+    const s = JSON.parse(localStorage.getItem(LS)||"{}");
+    if(s.apiKey){ $("apiKey").value = s.apiKey; $("saveKey").checked = true; }
+    if(s.model){ if(["claude-sonnet-4-6","claude-opus-4-8"].includes(s.model)) $("model").value=s.model; else { $("model").value="__custom"; $("modelCustom").style.display="block"; $("modelCustom").value=s.model; } }
+  }catch{}
+}
+function currentModel(){ return $("model").value==="__custom" ? ($("modelCustom").value.trim()||"claude-sonnet-4-6") : $("model").value; }
+function saveSettings(){
+  const s = { model: currentModel() };
+  if($("saveKey").checked) s.apiKey = $("apiKey").value.trim();
+  localStorage.setItem(LS, JSON.stringify(s));
+}
+
+function clearLog(){ $("log").innerHTML=""; }
+function logLine(state_, text, sub){
+  const ic = state_==="ok" ? `<span class="ic ok">✓</span>` : state_==="run" ? `<span class="ic run"><span class="spinner"></span></span>` : state_==="er" ? `<span class="ic er">✗</span>` : `<span class="ic"></span>`;
+  const li = document.createElement("div"); li.className="li";
+  li.innerHTML = `${ic}<div><div>${text}</div>${sub?`<div class="sub">${sub}</div>`:""}</div>`;
+  $("log").appendChild(li); return li;
+}
+function setLast(li, state_, text, sub){
+  const ic = state_==="ok" ? `<span class="ic ok">✓</span>` : state_==="er" ? `<span class="ic er">✗</span>` : `<span class="ic run"><span class="spinner"></span></span>`;
+  li.innerHTML = `${ic}<div><div>${text}</div>${sub?`<div class="sub">${sub}</div>`:""}</div>`;
+}
+function showErr(msg){ const e=$("errbox"); e.style.display="block"; e.textContent = msg; }
+function hideErr(){ $("errbox").style.display="none"; }
+function refreshRunBtn(){ $("runBtn").disabled = !(state.file && $("apiKey").value.trim()); }
+
+function setFile(f){
+  if(!f) return;
+  if(!/\.pdf$/i.test(f.name) && f.type!=="application/pdf"){ showErr("PDF 파일만 선택할 수 있습니다."); return; }
+  hideErr();
+  state.file = f; state.libId = null;
+  $("fileName").textContent = "📄 "+f.name;
+  if(!$("outName").value.trim()) $("outName").placeholder = f.name.replace(/\.pdf$/i,"");
+  refreshRunBtn();
+}
+
+async function extractImages(parsed, dpi){
+  const slides = parsed.mediaSlides || []; const images = []; let okCount = 0;
+  for(let i=0;i<slides.length;i++){
+    const sl = slides[i]; const page = sl.layoutReferencePage;
+    if(!page || page<1 || page>state.pageCount){ images.push({ data:null, imgH:LAYOUT.imgMaxH }); continue; }
+    try{
+      const raw = await renderPage(state.pdfDoc, page, dpi);
+      const cropped = cropVertical(raw, sl.cropRatio);
+      const aspect = cropped.width / cropped.height;
+      let h = LAYOUT.imgW / aspect; if(h > LAYOUT.imgMaxH) h = LAYOUT.imgMaxH;
+      images.push({ data: toPptxImageData(cropped), imgH:h }); okCount++;
+    }catch{ images.push({ data:null, imgH:LAYOUT.imgMaxH }); }
+  }
+  return { images, okCount };
+}
+
+async function run(){
+  hideErr();
+  if(!window.PptxGenJS){ showErr("라이브러리 로딩 실패 — 인터넷 연결을 확인하고 새로고침하세요."); return; }
+  saveSettings();
+  const apiKey = $("apiKey").value.trim();
+  const model = currentModel();
+  const font = FIXED_FONT;
+  const dpi = FIXED_DPI;
+  state.stem = ($("outName").value.trim() || state.file.name.replace(/\.pdf$/i,"")) || "가이드";
+
+  $("runBtn").disabled = true; $("resultCard").style.display="none"; $("logCard").style.display="block"; clearLog();
+
+  let li = logLine("run","PDF 분석 중…");
+  try{
+    const buf = await state.file.arrayBuffer();
+    state.pdfBase64 = base64FromArrayBuffer(buf);
+    state.pdfDoc = await loadPdf(buf);
+    state.pageCount = state.pdfDoc.numPages;
+    setLast(li,"ok","PDF 분석 완료", `${state.pageCount} 페이지`);
+  }catch(e){ setLast(li,"er","PDF 분석 실패"); showErr("PDF를 읽지 못했습니다: "+e.message); $("runBtn").disabled=false; return; }
+
+  li = logLine("run",`Claude(${model})로 가이드 파싱 중…`, "PDF 전체를 분석합니다. 페이지 수에 따라 10~40초 정도 걸립니다.");
+  try{ state.parsed = await parseGuide(state.pdfBase64, { apiKey, model }); }
+  catch(e){
+    setLast(li,"er","파싱 실패");
+    if(e.cors) showErr("Claude API 호출이 브라우저에서 차단되었습니다.\n\n파일을 더블클릭(file://)으로 연 경우 일부 브라우저가 막을 수 있습니다.\n→ 해결: 동봉된 '사용법' 문서의 '열기 방법'을 참고하세요 (호스팅 또는 로컬 서버로 열기).");
+    else showErr("파싱 실패: "+e.message);
+    $("runBtn").disabled=false; refreshRunBtn(); return;
+  }
+  const slides = state.parsed.mediaSlides || [];
+  setLast(li,"ok","파싱 완료", state.parsed.guideTitle || "제목 없음");
+  slides.forEach(s=> logLine("","→ "+(s.title||"(제목 없음)")) );
+
+  li = logLine("run","가이드 예시 이미지 추출 중…");
+  const { images, okCount } = await extractImages(state.parsed, dpi);
+  setLast(li,"ok","가이드 예시 이미지 추출", `${okCount}/${slides.length}`);
+
+  li = logLine("run","PPT 생성 중…");
+  try{ state.blob = await buildDeck(state.parsed, images, { font }); setLast(li,"ok","PPT 생성 완료", `${slides.length}장`); }
+  catch(e){ setLast(li,"er","PPT 생성 실패"); showErr("PPT 생성 실패: "+e.message); $("runBtn").disabled=false; refreshRunBtn(); return; }
+
+  showResult();
+  const sli = logLine("run", teamOn()?"팀 저장소에 업로드 중…":"라이브러리에 저장 중…");
+  try{ await saveToLibrary(); setLast(sli,"ok", teamOn()?"팀 저장소에 저장됨":"라이브러리에 저장됨"); }
+  catch(e){ setLast(sli,"er","라이브러리 저장 실패 — 다운로드는 가능", e.message); }
+  $("runBtn").disabled=false; refreshRunBtn();
+}
+
+function showResult(){ $("resultCard").style.display="block"; $("resultCard").scrollIntoView({ behavior:"smooth", block:"nearest" }); }
+
+function download(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1500);
+}
+
+/* ── 라이브러리 UI ── */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function fmtDate(ts){ const d=new Date(ts); const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+async function saveToLibrary(){
+  if(!state.blob) return;
+  const meta = {
+    id: state.libId || newId(),
+    name: `${state.stem}_제작가이드.pptx`,
+    createdAt: Date.now(),
+    slideCount: (state.parsed && state.parsed.mediaSlides || []).length,
+    source: "generated",
+    edited: false,
+  };
+  await activeStore().save(meta, state.blob);
+  state.libId = meta.id;
+  await renderLibrary();
+}
+
+function updateDownloadBtn(){
+  const n = selectedOrder.length, b = $("downloadBtn");
+  b.disabled = n < 1;
+  b.textContent = n>=2 ? `${n}개 합쳐 다운로드` : "라이브러리 PPT 다운로드";
+}
+
+async function doDownload(){
+  const ids = [...selectedOrder]; if(!ids.length) return;
+  const S = activeStore();
+  let list; try{ list = await S.list(); }catch(e){ alert("목록을 불러오지 못했습니다: "+e.message); return; }
+  const map={}; list.forEach(it=>map[it.id]=it);
+  const items = ids.map(id=>map[id]).filter(Boolean);
+  if(!items.length) return;
+  const b=$("downloadBtn"); const prev=b.textContent; b.disabled=true; b.textContent="불러오는 중…";
+  try{
+    const blobs=[];
+    for(const it of items){ const blob = await S.getBlob(it.id); if(!blob) throw new Error(`'${it.name}' 파일을 불러오지 못했습니다.`); blobs.push(blob); }
+    if(blobs.length===1){ download(blobs[0], items[0].name); }
+    else { b.textContent="합치는 중…"; const merged = await mergePptx(blobs); download(merged, `합본_${blobs.length}건.pptx`); }
+  }catch(e){ alert("다운로드 실패: "+e.message+"\n(2개 이상 합칠 때 실패하면 1개씩 선택해 받아보세요.)"); }
+  finally{ b.textContent=prev; updateDownloadBtn(); }
+}
+
+async function testCloud(){
+  const out = $("connTest"); out.style.display="block"; out.innerHTML="";
+  const line = (ok, txt, detail)=>{ const d=document.createElement("div"); d.className="ctline "+(ok?"ok":"er"); d.innerHTML=`<span>${ok?"✓":"✗"}</span>${escapeHtml(txt)}${detail?` <em>— ${escapeHtml(detail)}</em>`:""}`; out.appendChild(d); };
+
+  const cfg = cloudCfg();
+  if(!cfg){ line(false,"팀 저장소 설정이 없습니다", "‘팀 저장소’ 버튼으로 URL/anon key를 입력하거나 코드 상단 상수를 채우세요"); return; }
+  line(true,"설정 감지됨", cfg.url);
+
+  let c;
+  try{ c = await sbClient(); if(!c) throw new Error("client 없음"); line(true,"Supabase SDK 로드 OK"); }
+  catch(e){ line(false,"SDK 로드 실패(인터넷/CDN 확인)", e.message); return; }
+
+  try{ const { error } = await c.from("decks").select("id").limit(1); if(error) throw new Error(error.message); line(true,"테이블 'decks' 읽기 OK"); }
+  catch(e){ line(false,"테이블 'decks' 읽기 실패", e.message+"  → 가이드 B-3의 SQL 실행 확인"); }
+
+  const testPath = `__conntest__/${newId()}.txt`;
+  let uploaded = false;
+  try{ const { error } = await c.storage.from(SB_BUCKET).upload(testPath, new Blob(["ok"],{type:"text/plain"}), { upsert:true, contentType:"text/plain" }); if(error) throw new Error(error.message); uploaded=true; line(true,`Storage '${SB_BUCKET}' 업로드 OK`); }
+  catch(e){ line(false,`Storage '${SB_BUCKET}' 업로드 실패`, e.message+"  → 버킷 생성/정책 확인(가이드 B-2,B-3)"); }
+  if(uploaded){
+    try{ const { error } = await c.storage.from(SB_BUCKET).download(testPath); if(error) throw new Error(error.message); line(true,"Storage 다운로드 OK"); }
+    catch(e){ line(false,"Storage 다운로드 실패", e.message); }
+    try{ const { error } = await c.storage.from(SB_BUCKET).remove([testPath]); if(error) throw new Error(error.message); line(true,"Storage 삭제 OK"); }
+    catch(e){ line(false,"Storage 삭제 실패", e.message); }
+  }
+
+  const tid = "__conntest__"+newId();
+  try{
+    const { error:e1 } = await c.from("decks").insert({ id:tid, name:"__connection_test__", source:"test" }); if(e1) throw new Error(e1.message);
+    const { error:e2 } = await c.from("decks").delete().eq("id", tid); if(e2) throw new Error(e2.message);
+    line(true,"테이블 쓰기/삭제 OK");
+  }catch(e){ line(false,"테이블 쓰기 실패", e.message+"  → RLS 정책 확인(가이드 B-3)"); }
+
+  line(true,"테스트 완료", "모두 ✓ 이면 팀 저장소 사용 준비 끝");
+}
+
+function updateStorageBadge(){
+  const el = $("storeBadge"); if(!el) return;
+  if(teamOn()){ el.textContent = "팀 공유"; el.className = "storebadge on"; }
+  else { el.textContent = "이 브라우저"; el.className = "storebadge off"; }
+}
+
+async function renderLibrary(){
+  const box = $("libList");
+  updateStorageBadge();
+  box.innerHTML = `<div class="empty">불러오는 중…</div>`;
+  let items = [];
+  try{ items = await activeStore().list(); }
+  catch(e){ box.innerHTML = `<div class="empty">라이브러리를 불러오지 못했습니다: ${escapeHtml(e.message)}</div>`; updateDownloadBtn(); return; }
+
+  const ids = new Set(items.map(i=>i.id));
+  for(let i=selectedOrder.length-1;i>=0;i--) if(!ids.has(selectedOrder[i])) selectedOrder.splice(i,1);
+  updateDownloadBtn();
+
+  items.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const q = ($("libSearch").value||"").trim().toLowerCase();
+  const shown = q ? items.filter(it=>(it.name||"").toLowerCase().includes(q)) : items;
+
+  box.innerHTML = "";
+  if(!items.length){ box.innerHTML = `<div class="empty">${teamOn()?"팀 저장소가 비어 있습니다.":"저장된 PPT가 없습니다."} PDF로 PPT를 만들면 여기에 쌓입니다.</div>`; return; }
+  if(!shown.length){ box.innerHTML = `<div class="empty">검색 결과가 없습니다.</div>`; return; }
+
+  shown.forEach(it=>{
+    const row = document.createElement("div"); row.className="libitem";
+    const chk = document.createElement("input"); chk.type="checkbox"; chk.className="chk"; chk.title="다운로드 선택"; chk.checked = selectedOrder.includes(it.id);
+    chk.addEventListener("change", ()=>{
+      const i = selectedOrder.indexOf(it.id);
+      if(chk.checked){ if(i<0) selectedOrder.push(it.id); } else if(i>=0) selectedOrder.splice(i,1);
+      updateDownloadBtn();
+    });
+    const meta = document.createElement("div"); meta.className="meta";
+    const srcCls = it.source==="imported" ? "imp" : "gen";
+    const srcTxt = it.source==="imported" ? "가져옴" : "생성";
+    const tags = `<span class="src ${srcCls}">${srcTxt}</span>` + (it.edited?`<span class="src edt">수정본</span>`:"");
+    const cnt = it.slideCount!=null ? `${it.slideCount}장 · ` : "";
+    meta.innerHTML = `<div class="nm">📊 ${escapeHtml(it.name)}</div><div class="sub2">${tags}${cnt}${fmtDate(it.updatedAt||it.createdAt)}</div>`;
+
+    const ops = document.createElement("div"); ops.className="ops";
+    const ren = document.createElement("button"); ren.className="libbtn"; ren.textContent="이름변경";
+    ren.addEventListener("click", async ()=>{
+      const cur = it.name.replace(/\.pptx$/i,"");
+      const v = prompt("새 파일 이름 (확장자 제외)", cur);
+      if(v==null) return; const nm = v.trim(); if(!nm) return;
+      const name = /\.pptx$/i.test(nm) ? nm : nm+".pptx";
+      try{ await activeStore().rename(it.id, name); }catch(e){ alert("이름변경 실패: "+e.message); return; }
+      await renderLibrary();
+    });
+    const rep = document.createElement("button"); rep.className="libbtn"; rep.textContent="교체"; rep.title="직접 수정한 .pptx로 교체";
+    rep.addEventListener("click", ()=>{ pendingReplaceId = it.id; $("replaceInput").click(); });
+    const del = document.createElement("button"); del.className="libbtn del"; del.textContent="삭제";
+    del.addEventListener("click", async ()=>{ if(!confirm("이 항목을 삭제할까요?")) return; try{ await activeStore().remove(it.id); }catch(e){ alert("삭제 실패: "+e.message); return; } if(state.libId===it.id) state.libId=null; await renderLibrary(); });
+    ops.appendChild(ren); ops.appendChild(rep); ops.appendChild(del);
+
+    row.appendChild(chk); row.appendChild(meta); row.appendChild(ops);
+    box.appendChild(row);
+  });
+}
+
+let pendingReplaceId = null;
+
+/* ── 이벤트 바인딩 ── */
+loadSettings();
+applyLogo();
+
+$("brandBtn").addEventListener("click",()=>$("logoInput").click());
+$("logoInput").addEventListener("change",e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  const r=new FileReader(); r.onload=()=>{ try{ localStorage.setItem(LOGO_LS, r.result); applyLogo(); }catch{ alert("로고 이미지가 너무 큽니다. 더 작은 파일을 사용하세요."); } }; r.readAsDataURL(f);
+});
+
+$("toggleKey").addEventListener("click",()=>{ const k=$("apiKey"); const show=k.type==="password"; k.type=show?"text":"password"; $("toggleKey").textContent=show?"숨김":"표시"; });
+$("model").addEventListener("change",()=>{ $("modelCustom").style.display = $("model").value==="__custom" ? "block":"none"; });
+["apiKey","model","modelCustom"].forEach(id=> $(id).addEventListener("input", ()=>{ saveSettings(); refreshRunBtn(); }));
+$("saveKey").addEventListener("change",()=>{ if(!$("saveKey").checked){ const s=JSON.parse(localStorage.getItem(LS)||"{}"); delete s.apiKey; localStorage.setItem(LS,JSON.stringify(s)); } else saveSettings(); });
+
+const drop=$("drop"), fileInput=$("fileInput");
+drop.addEventListener("click",()=>fileInput.click());
+drop.addEventListener("dragover",e=>{ e.preventDefault(); drop.classList.add("drag"); });
+drop.addEventListener("dragleave",()=>drop.classList.remove("drag"));
+drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("drag"); if(e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener("change",e=>{ if(e.target.files[0]) setFile(e.target.files[0]); });
+
+$("runBtn").addEventListener("click", run);
+$("dlPptx").addEventListener("click",()=>{ if(state.blob) download(state.blob, `${state.stem}_제작가이드.pptx`); });
+
+$("libSearch").addEventListener("input", ()=> renderLibrary());
+$("downloadBtn").addEventListener("click", doDownload);
+
+$("replaceInput").addEventListener("change", async e=>{
+  const f = e.target.files[0]; e.target.value=""; const id = pendingReplaceId; pendingReplaceId=null;
+  if(!f || !id) return;
+  if(!/\.pptx$/i.test(f.name)){ alert(".pptx 파일을 선택하세요."); return; }
+  let slideCount = null; try{ const z=await JSZip.loadAsync(f); slideCount=(await orderedSlides(z)).length; }catch{}
+  try{ await activeStore().replace(id, f, slideCount); }catch(err){ alert("교체 실패: "+err.message); return; }
+  await renderLibrary();
+});
+
+$("teamBtn").addEventListener("click", ()=>{
+  const curUrl = localStorage.getItem("da-sb-url") || SUPABASE_URL || "";
+  const url = prompt("Supabase 프로젝트 URL (예: https://xxxx.supabase.co)\n\n비우고 확인하면 팀 저장소를 끄고 '이 브라우저' 저장으로 돌아갑니다:", curUrl);
+  if(url===null) return;
+  if(!url.trim()){ localStorage.removeItem("da-sb-url"); localStorage.removeItem("da-sb-key"); _sbClient=null; _sbKeyUsed=""; updateStorageBadge(); renderLibrary(); return; }
+  const curKey = localStorage.getItem("da-sb-key") || SUPABASE_ANON_KEY || "";
+  const key = prompt("Supabase anon public key:", curKey);
+  if(key===null) return;
+  localStorage.setItem("da-sb-url", url.trim()); localStorage.setItem("da-sb-key", key.trim()); _sbClient=null; _sbKeyUsed="";
+  updateStorageBadge(); renderLibrary();
+});
+
+$("testBtn").addEventListener("click", testCloud);
+
+refreshRunBtn();
+renderLibrary();
+</script>
+</body>
+</html>
