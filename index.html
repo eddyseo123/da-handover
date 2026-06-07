@@ -175,10 +175,12 @@
     <div class="libbar">
       <input id="libSearch" type="text" placeholder="이름으로 검색…" />
       <button class="btn sm" id="downloadBtn" type="button" disabled>라이브러리 PPT 다운로드</button>
+      <button class="btn ghost sm" id="uploadBtn" type="button" title="PPTX 파일을 라이브러리에 직접 추가">＋ PPT 업로드</button>
       <button class="btn ghost sm" id="teamBtn" type="button" title="팀 공유(Supabase) 켜기/끄기">팀 저장소</button>
       <button class="btn ghost sm" id="testBtn" type="button" title="Supabase 연결 점검">연결 테스트</button>
     </div>
     <div id="connTest" class="conntest"></div>
+    <input id="uploadInput" type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple />
     <input id="replaceInput" type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
     <div id="libList" class="liblist"></div>
   </section>
@@ -941,6 +943,20 @@ function updateStorageBadge(){
   else { el.textContent = "이 브라우저"; el.className = "storebadge off"; }
 }
 
+async function uploadFiles(list){
+  const files = [...list]; if(!files.length) return;
+  const pptx = files.filter(f=>/\.pptx$/i.test(f.name));
+  if(!pptx.length){ alert("PPTX(.pptx) 파일을 선택하세요."); return; }
+  const b=$("uploadBtn"); const prev=b.textContent; b.disabled=true; b.textContent="업로드 중…";
+  for(const f of pptx){
+    let slideCount = null; try{ const z = await JSZip.loadAsync(f); slideCount = (await orderedSlides(z)).length; }catch{}
+    const meta = { id:newId(), name:f.name, createdAt:Date.now(), slideCount, source:"imported", edited:false };
+    try{ await activeStore().save(meta, f); }catch(e){ alert("업로드 실패: "+f.name+" — "+e.message); }
+  }
+  b.disabled=false; b.textContent=prev;
+  await renderLibrary();
+}
+
 async function renderLibrary(){
   const box = $("libList");
   updateStorageBadge();
@@ -1049,6 +1065,8 @@ $("teamBtn").addEventListener("click", ()=>{
 });
 
 $("testBtn").addEventListener("click", testCloud);
+$("uploadBtn").addEventListener("click", ()=>$("uploadInput").click());
+$("uploadInput").addEventListener("change", e=>{ uploadFiles(e.target.files); e.target.value=""; });
 
 refreshRunBtn();
 renderLibrary();
