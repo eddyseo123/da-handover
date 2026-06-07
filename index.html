@@ -227,7 +227,7 @@ const FONT_SIZE = { title:16, sectionLabel:11, smallLabel:9, body:9.5, tableHead
 ============================================================ */
 const PARSE_INSTRUCTION = `당신은 광고 매체 DA(디스플레이 광고) 제작 가이드라인 PDF를 분석해, 제작팀 핸드오프용 슬라이드 데이터로 변환하는 전문가입니다.
 
-첨부된 PDF는 한국 광고 매체(네이버, 카카오, 토스 등)의 DA 소재 제작 가이드입니다. PDF가 깨진 글자(인코딩 오류)를 포함하더라도, 페이지 이미지를 보고 내용을 파악하세요.
+첨부된 이미지들은 한국 광고 매체(네이버, 카카오, 토스 등)의 DA 소재 제작 가이드 PDF를 페이지 순서대로 변환한 것입니다. 글자가 깨져 보이더라도 이미지를 보고 내용을 파악하세요.
 
 # 목표
 이 가이드를 아래 JSON 스키마로 변환하세요. 각 "매체 + 소재 타입" 조합이 하나의 슬라이드가 됩니다.
@@ -313,7 +313,30 @@ function cropVertical(canvas, ratio){
 /* ============================================================
    Claude 파싱 (브라우저 fetch)
 ============================================================ */
-async function parseGuide(pdfBase64, { apiKey, model }){
+// 페이지를 다운스케일 JPEG(base64)로 — PDF 통째 전송 시 용량 초과로 막히는 문제 회피
+async function renderPageJpegB64(pdfDoc, pageNum, maxEdge, quality){
+  const page = await pdfDoc.getPage(pageNum);
+  const v1 = page.getViewport({ scale: 1 });
+  let scale = maxEdge / Math.max(v1.width, v1.height);
+  if(scale > 2) scale = 2; if(scale < 0.2) scale = 0.2;
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+  return canvas.toDataURL("image/jpeg", quality).split(",")[1];
+}
+
+async function parseGuide(pdfDoc, pageCount, { apiKey, model, onProgress }){
+  // 각 페이지를 이미지 블록으로 전송 (용량 안정화)
+  const content = [];
+  const n = Math.min(pageCount || 0, 100);
+  for(let p=1;p<=n;p++){
+    if(onProgress) onProgress(p, n);
+    const b64 = await renderPageJpegB64(pdfDoc, p, 1600, 0.72);
+    content.push({ type:"image", source:{ type:"base64", media_type:"image/jpeg", data: b64 } });
+  }
+  content.push({ type:"text", text: PARSE_INSTRUCTION });
+
   let res;
   try{
     res = await fetch("https://api.anthropic.com/v1/messages",{
@@ -322,13 +345,7 @@ async function parseGuide(pdfBase64, { apiKey, model }){
         "x-api-key": apiKey, "anthropic-version":"2023-06-01",
         "anthropic-dangerous-direct-browser-access":"true", "content-type":"application/json",
       },
-      body: JSON.stringify({
-        model, max_tokens: 8000,
-        messages:[{ role:"user", content:[
-          { type:"document", source:{ type:"base64", media_type:"application/pdf", data: pdfBase64 } },
-          { type:"text", text: PARSE_INSTRUCTION },
-        ]}],
-      }),
+      body: JSON.stringify({ model, max_tokens: 8000, messages:[{ role:"user", content }] }),
     });
   }catch(e){ const err = new Error("네트워크 호출 실패"); err.cors = true; throw err; }
   if(!res.ok){
@@ -800,17 +817,16 @@ async function run(){
   let li = logLine("run","PDF 분석 중…");
   try{
     const buf = await state.file.arrayBuffer();
-    state.pdfBase64 = base64FromArrayBuffer(buf);
     state.pdfDoc = await loadPdf(buf);
     state.pageCount = state.pdfDoc.numPages;
     setLast(li,"ok","PDF 분석 완료", `${state.pageCount} 페이지`);
   }catch(e){ setLast(li,"er","PDF 분석 실패"); showErr("PDF를 읽지 못했습니다: "+e.message); $("runBtn").disabled=false; return; }
 
-  li = logLine("run",`Claude(${model})로 가이드 파싱 중…`, "PDF 전체를 분석합니다. 페이지 수에 따라 10~40초 정도 걸립니다.");
-  try{ state.parsed = await parseGuide(state.pdfBase64, { apiKey, model }); }
+  li = logLine("run",`Claude(${model})로 가이드 파싱 중…`, "페이지 이미지를 만들어 분석합니다. 페이지 수에 따라 10~40초 정도 걸립니다.");
+  try{ state.parsed = await parseGuide(state.pdfDoc, state.pageCount, { apiKey, model, onProgress:(p,n)=>setLast(li,"run",`Claude(${model})로 가이드 파싱 중…`,`페이지 변환 ${p}/${n} → 분석 대기`) }); }
   catch(e){
     setLast(li,"er","파싱 실패");
-    if(e.cors) showErr("Claude API 호출이 브라우저에서 차단되었습니다.\n\n파일을 더블클릭(file://)으로 연 경우 일부 브라우저가 막을 수 있습니다.\n→ 해결: 동봉된 '사용법' 문서의 '열기 방법'을 참고하세요 (호스팅 또는 로컬 서버로 열기).");
+    if(e.cors) showErr("Claude 호출이 실패했습니다 (브라우저 차단/네트워크 오류).\n\n확인:\n① 광고차단·보안 확장프로그램이나 회사 방화벽/VPN이 api.anthropic.com을 막고 있지 않은지\n② 로컬 파일(file://)이 아니라 배포 https 주소로 열었는지\n③ PDF 페이지가 매우 많으면 줄여서 시도");
     else showErr("파싱 실패: "+e.message);
     $("runBtn").disabled=false; refreshRunBtn(); return;
   }
